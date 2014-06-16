@@ -1,0 +1,6 @@
+Projekt z programowania w jezyku Java
+
+Temat : gra typu Space shooter
+Grupa : 211A
+Zespol: 6
+Sklad : Rafal Bebenek i Adrian Bartosinski

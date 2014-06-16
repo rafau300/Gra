@@ -1,0 +1,17 @@
+package pl.kielce.tu.projekt;
+
+import javax.swing.JPanel;
+
+public class Menu extends JPanel{
+
+	static MyApplet2 aplet = new MyApplet2();
+	
+	/**
+	 * @param args
+	 */
+	public static void main(String[] args) {
+		// TODO Auto-generated method stub
+		aplet.init();
+	}
+
+}

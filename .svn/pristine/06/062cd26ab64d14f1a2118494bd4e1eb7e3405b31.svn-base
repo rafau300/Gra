@@ -1,0 +1,181 @@
+package pl.kielce.tu.projekt;
+
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.net.ServerSocket;
+import java.net.Socket;
+
+/**
+ * Klasa, w ktorej znajduje sie serwer.
+ */
+
+public class Server implements Serializable {
+
+	static ServerSocket server;
+	static ServerSocket server2;
+	static final long serialVersionUID = 1L;
+	private static Socket[] gracz = new Socket[3];
+	static boolean flaga = true;
+	static Dane d1 = new Dane(250, 300, 1, 0, false);
+	static Dane d2 = new Dane(350, 300, 2, 0, false);
+	static int kropki = 0;
+
+	/**
+	 * funkcja, w ktorej wykonuje sie serwer
+	 * 
+	 * @param args
+	 * @throws Exception
+	 */
+	@SuppressWarnings("deprecation")
+	public static void main(String[] args) throws Exception {
+
+		server = new ServerSocket(54321);
+
+		int i = 1;
+
+		System.out.println("Uruchomiono serwer");
+		// Socket socket = server.accept();
+		System.out.print("Oczekiwanie");
+
+		Thread t = new Thread(new Runnable() {// tworzenie nowego watku
+					public void run() {
+						while (flaga) {
+							try {
+								Thread.sleep(1000); // timer, uruchamia sie co
+													// 1000 ms
+								System.out.print(".");
+								kropki++;
+								if (kropki % 60 == 0)
+									System.out.println();
+							} catch (InterruptedException ie) {
+								System.err.println("Wystapil blad w watku!");
+								ie.printStackTrace();
+							}
+						}
+						System.out.println("\nKlient podlaczony");
+					}
+				});
+
+		t.start();
+
+		for (i = 1; i <= 2; i++) {// Akceptowanie po��czenie i wysy�anie
+									// do aplet�w nr gracza
+			gracz[i] = server.accept();
+			System.out.println("\n>>Przylaczyl sie " + i + " gracz");
+			gracz[i].getOutputStream().write(i);
+		}
+		System.out.println(">>Wysy�am potwierdzenia do klient�w");
+		gracz[1].getOutputStream().write(1111);// wysy�anie do graczy
+												// potwierdzenia,
+		gracz[2].getOutputStream().write(1111);// �e inny gracz r�wnie�
+												// si� po��czy�
+		server.close();
+		// otrzymywanie i wysylanie obiekt�w
+
+		t.stop();
+		// =========
+		System.out.println(">>Rozpoczynam komunikacje");
+		
+		server = new ServerSocket(54321); // socket do przylaczenia sie o
+		// pobrania numeru gracza
+		server2 = new ServerSocket(54322); // socket do przesylki obiektu
+		// "Dane"
+		gracz[1] = server2.accept();
+		gracz[2] = server2.accept();
+		
+		
+		while (!d1.koniecGry || !d2.koniecGry) {
+			if (d1.koniecGry || d2.koniecGry) { // gdy obaj gracze zakoncza gre
+				d1.koniecGry = true;
+				d2.koniecGry = true;
+				System.out.println("Koniec gry");
+				server2.close();
+				System.exit(1);
+			}
+
+
+
+			ObjectOutputStream out1 = new ObjectOutputStream(
+					gracz[1].getOutputStream());
+			ObjectOutputStream out2 = new ObjectOutputStream(
+					gracz[2].getOutputStream());
+			ObjectInputStream in1 = new ObjectInputStream(
+					gracz[1].getInputStream());
+			ObjectInputStream in2 = new ObjectInputStream(
+					gracz[2].getInputStream());
+
+			// out1.flush();
+			// out2.flush();
+
+			try {
+				d1 = (Dane) in1.readObject();
+				// if
+				// (d1.ktoryGracz==1)System.out.println(">>Otrzymano pakiet od pierwszego gracza");
+				// else
+				// System.out.println(">>Otrzymano pakiet od drugiego gracza");
+				// System.out.println("d1.x: "+d1.x+" d1.y: "+d1.y);
+				for (i = 0; i < 10; i++)
+					if (d1.asteroidaHp[i] > 0) {
+						d1.asteroidaX[i] += d1.asteroidaRX[i];
+						d1.asteroidaY[i] += d1.asteroidaRY[i];
+					
+						if (d1.asteroidaY[i]>=480) d1.asteroidaY[i]=-20;
+					}
+					else {//gdy zestrzelono = odnowienie i delikatne przyspieszenie
+						d1.asteroidaHp[i]=10;
+						d1.asteroidaY[i]=-20;
+						if(d2.asteroidaRY[i]<3) d1.asteroidaRY[i]+=1;
+					}
+			} catch (Exception e) {
+				System.out.println("1. Nie odebrano pakietu");
+				e.printStackTrace();
+			}
+			try {
+				d2 = (Dane) in2.readObject();
+				// if (d2.ktoryGracz==2)
+				// System.out.println(">>Otrzymano pakiet od drugiego gracza");
+				// else
+				// System.out.println(">>Otrzymano pakiet od pierwszego gracza");
+				// System.out.println("d2.x: "+d2.x+" d2.y: "+d2.y);
+				
+				for (i = 0; i < 10; i++)
+					if (d2.asteroidaHp[i] > 0) {
+						d2.asteroidaX[i] += d2.asteroidaRX[i];
+						d2.asteroidaY[i] += d2.asteroidaRY[i];
+
+						if (d2.asteroidaY[i]>=480) d2.asteroidaY[i]=-20;
+					}
+					else {
+						d2.asteroidaHp[i]=10;
+						d2.asteroidaY[i]=-20;
+						if (d2.asteroidaRY[i]<3) d2.asteroidaRY[i]+=1;
+					}
+				
+			} catch (Exception e) {
+				System.out.println("2. Nie odebrano pakietu");
+				e.printStackTrace();
+			}
+
+			if (d1.ktoryGracz == 1) {// wysy�anie danych w przypadku, gdy
+										// otrzymano pierwszy pakiet od
+										// pierwszego gracza
+				out1.writeObject(d1);
+				out1.writeObject(d2);
+				out2.writeObject(d1);
+				out2.writeObject(d2);
+			} else {// gdy otrzymano najpierw pakiet od drugiego gracza
+				out1.writeObject(d2);
+				out1.writeObject(d1);
+				out2.writeObject(d2);
+				out2.writeObject(d1);
+			}
+		}
+			server2.close();
+			server.close();
+		
+		// ==========
+		System.exit(0);
+	}
+
+}

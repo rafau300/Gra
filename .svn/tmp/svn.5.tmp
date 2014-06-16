@@ -1,0 +1,565 @@
+package pl.kielce.tu.projekt;
+
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Image;
+import java.awt.Toolkit;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.util.Timer;
+import java.util.TimerTask;
+
+import javax.swing.JApplet;
+import javax.swing.JComponent;
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+
+/**
+ * Klasa gracza, w niej wykonywane sa przesylki, obliczenia, itp.
+ */
+public class MyApplet2 extends JApplet implements Zmienne {
+
+	private static final long serialVersionUID = 1L;
+	static int ktoryGracz;
+	String host;
+	static Socket socket = null;
+	static int oczekiwanie = 0;
+	static boolean flaga = true;
+	static Dane d1 = new Dane(250, 300, 1, 0, false);
+	static Dane d2 = new Dane(350, 300, 2, 0, false);
+	static int petla = 0;
+	static String nieudanePolaczenie = new String();
+
+	/*----------------------------Strzelanie--------------------------------*/
+	/**
+	 * Za pomoca tej funkcji statki wystrzeliwuja pociski
+	 * 
+	 * @param petla
+	 *            - numer petli, zeby mozna bylo strzelac z odpowiednia
+	 *            czestotliwoscia
+	 */
+	public void strzal(int petla) {
+		if (petla % 15 == 0) {
+			if (ktoryGracz == 1) {
+				int j = 0;
+				while (d1.pociskStrzelono[j] == true && j < 9)
+					j++;
+				if (j < 10) {
+					d1.pociskX[j] = d1.x;
+					d1.pociskY[j] = d1.y;
+					d1.pociskStrzelono[j] = true;
+				}
+			}
+			if (ktoryGracz == 2) {
+				int j = 0;
+				while (d2.pociskStrzelono[j] == true && j < 9)
+					j++;
+				if (j < 10) {
+					d2.pociskX[j] = d2.x;
+					d2.pociskY[j] = d2.y;
+					d2.pociskStrzelono[j] = true;
+				}
+			}
+		}
+	}
+
+	/*------------------------Ruch pocisk�w--------------------------*/
+	/**
+	 * "Przesuwanie" pociskow
+	 */
+	public void ruchPociskow() {
+		for (int j = 0; j < 10; j++) {
+			if (ktoryGracz == 1) {
+				if (d1.pociskY[j] >= 0 && d1.pociskStrzelono[j] == true)
+					d1.pociskY[j] -= 5;
+				else if (d1.pociskY[j] < 0)
+					d1.pociskStrzelono[j] = false;
+			} else {// gracz nr 2
+				if (d2.pociskY[j] >= 0 && d2.pociskStrzelono[j] == true)
+					d2.pociskY[j] -= 5;
+				else if (d2.pociskY[j] < 0)
+					d2.pociskStrzelono[j] = false;
+			}
+		}
+	}
+
+	/*----------------------------Detekcja koizji-----------------------------*/
+	/**
+	 * Detekcja kolizji
+	 * 
+	 * @param ktory
+	 *            - ktory gracz wywolal funkcje
+	 * @return Zwraca 1 jesli nastapila kolizja, a w efekcie - koniec gry dla
+	 *         tego gracza
+	 */
+	public int kolizja(int ktory) {
+		if (ktory == 1) {
+			for (int i = 0; i < 10; i++) {
+				if (d1.asteroidaHp[i] > 0) {
+					if (d1.x - 24 <= d1.asteroidaX[i] + 10
+							&& d1.x - 24 >= d1.asteroidaX[i] - 10
+							&& d1.y - 24 <= d1.asteroidaY[i] + 10
+							&& d1.y - 24 >= d1.asteroidaY[i] - 10)
+						return 1;
+					if (d1.x - 24 <= d1.asteroidaX[i] + 10
+							&& d1.x - 24 >= d1.asteroidaX[i] - 10
+							&& d1.y + 24 >= d1.asteroidaY[i] - 10
+							&& d1.y + 24 <= d1.asteroidaY[i] + 10)
+						return 1;
+					if (d1.x + 24 >= d1.asteroidaX[i] - 10
+							&& d1.x + 24 <= d1.asteroidaX[i] + 10
+							&& d1.y - 24 <= d1.asteroidaY[i] + 10
+							&& d1.y - 24 >= d1.asteroidaY[i] - 10)
+						return 1;
+					if (d1.x + 24 >= d1.asteroidaX[i] - 10
+							&& d1.x + 24 <= d1.asteroidaX[i] + 10
+							&& d1.y + 24 >= d1.asteroidaY[i] - 10
+							&& d1.y + 24 <= d1.asteroidaY[i] + 10)
+						return 1;
+				}
+			}
+		}
+		if (ktory == 2) {
+			for (int i = 0; i < 10; i++) {
+				if (d1.asteroidaHp[i] > 0) {
+					if (d2.x - 24 <= d1.asteroidaX[i] + 10
+							&& d2.x - 24 >= d1.asteroidaX[i] - 10
+							&& d2.y - 24 <= d1.asteroidaY[i] + 10
+							&& d2.y - 24 >= d1.asteroidaY[i] - 10)
+						return 1;
+					if (d2.x - 24 <= d1.asteroidaX[i] + 10
+							&& d2.x - 24 >= d1.asteroidaX[i] - 10
+							&& d2.y + 24 >= d1.asteroidaY[i] - 10
+							&& d2.y + 24 <= d1.asteroidaY[i] + 10)
+						return 1;
+					if (d2.x + 24 >= d1.asteroidaX[i] - 10
+							&& d2.x + 24 <= d1.asteroidaX[i] + 10
+							&& d2.y - 24 <= d1.asteroidaY[i] + 10
+							&& d2.y - 24 >= d1.asteroidaY[i] - 10)
+						return 1;
+					if (d2.x + 24 >= d1.asteroidaX[i] - 10
+							&& d2.x + 24 <= d1.asteroidaX[i] + 10
+							&& d2.y + 24 >= d1.asteroidaY[i] - 10
+							&& d2.y + 24 <= d1.asteroidaY[i] + 10)
+						return 1;
+				}
+			}
+		}
+		return 0;
+	}
+
+	/*------------------kolizja Pocisków z asteroidami---------------------*/
+	/**
+	 * Funkcja sprawdza, czy pocisk uderzyl w przeszkode
+	 * 
+	 * @return ...
+	 */
+	public int kolizjaPocisku() {
+		boolean trafiono = false;
+		if (ktoryGracz == 1) {
+			for (int i = 0; i < 10; i++) {
+				trafiono = false;
+				if (d1.asteroidaHp[i] > 0) {
+					for (int j = 0; j < 10; j++) {
+						trafiono=false;
+						if (d1.pociskX[j] - 2 <= d1.asteroidaX[i] + 10
+								&& d1.pociskX[j] - 2 >= d1.asteroidaX[i] - 10
+								&& d1.pociskY[j] - 2 <= d1.asteroidaY[i] + 10
+								&& d1.pociskY[j] - 2 >= d1.asteroidaY[i] - 10)
+							trafiono = true;
+						if (d1.pociskX[j] - 2 <= d1.asteroidaX[i] + 10
+								&& d1.pociskX[j] - 2 >= d1.asteroidaX[i] - 10
+								&& d1.pociskY[j] + 2 >= d1.asteroidaY[i] - 10
+								&& d1.pociskY[j] + 2 <= d1.asteroidaY[i] + 10)
+							trafiono = true;
+						if (d1.pociskX[j] + 2 >= d1.asteroidaX[i] - 10
+								&& d1.pociskX[j] + 2 <= d1.asteroidaX[i] + 10
+								&& d1.pociskY[j] - 2 <= d1.asteroidaY[i] + 10
+								&& d1.pociskY[j] - 2 >= d1.asteroidaY[i] - 10)
+							trafiono = true;
+						if (d1.pociskX[j] + 2 >= d1.asteroidaX[i] - 10
+								&& d1.pociskX[j] + 2 <= d1.asteroidaX[i] + 10
+								&& d1.pociskY[j] + 2 >= d1.asteroidaY[i] - 10
+								&& d1.pociskY[j] + 2 <= d1.asteroidaY[i] + 10)
+							trafiono = true;
+							
+						if (trafiono) {
+							d1.asteroidaHp[i] -= 5;
+							d1.punkty += 5;
+							d1.pociskStrzelono[j] = false;
+							d1.pociskX[j]=-50;
+						}
+					}
+				}
+			}
+		}
+		if (ktoryGracz == 2) {
+			for (int i = 0; i < 10; i++) {
+				trafiono = false;
+				if (d1.asteroidaHp[i] > 0) {
+					for (int j = 0; j < 10; j++) {
+						trafiono=false;
+						if (d2.pociskX[j] - 2 <= d1.asteroidaX[i] + 10
+								&& d2.pociskX[j] - 2 >= d1.asteroidaX[i] - 10
+								&& d2.pociskY[j] - 2 <= d1.asteroidaY[i] + 10
+								&& d2.pociskY[j] - 2 >= d1.asteroidaY[i] - 10)
+							trafiono = true;
+						if (d2.pociskX[j] - 2 <= d1.asteroidaX[i] + 10
+								&& d2.pociskX[j] - 2 >= d1.asteroidaX[i] - 10
+								&& d2.pociskY[j] + 2 >= d1.asteroidaY[i] - 10
+								&& d2.pociskY[j] + 2 <= d1.asteroidaY[i] + 10)
+							trafiono = true;
+						if (d2.pociskX[j] + 2 >= d1.asteroidaX[i] - 10
+								&& d2.pociskX[j] + 2 <= d1.asteroidaX[i] + 10
+								&& d2.pociskY[j] - 2 <= d1.asteroidaY[i] + 10
+								&& d2.pociskY[j] - 2 >= d1.asteroidaY[i] - 10)
+							trafiono = true;
+						if (d2.pociskX[j] + 2 >= d1.asteroidaX[i] - 10
+								&& d2.pociskX[j] + 2 <= d1.asteroidaX[i] + 10
+								&& d2.pociskY[j] + 2 >= d1.asteroidaY[i] - 10
+								&& d2.pociskY[j] + 2 <= d1.asteroidaY[i] + 10)
+							trafiono = true;
+
+						if (trafiono) {
+							d1.asteroidaHp[i] -= 5;
+							d2.punkty += 5;
+							d2.pociskStrzelono[j] = false;
+							d2.pociskX[j]=-50;
+						}
+					}
+				}
+			}
+		}
+		return 0;
+	}
+	
+
+	
+
+	/*----------------------------Przesylanie obiektow------------------------*/
+	/**
+	 * Cyklicznie wywolywana funkcja. Przesyla obiekty do serwera, a potem je
+	 * odbiera
+	 * 
+	 * @return
+	 */
+	public int przesylka() {
+		// String host = this.getDocumentBase().getHost();
+		// Socket socket;
+		ObjectOutputStream out = null;
+		ObjectInputStream in = null;
+		int zwroconyKod = 0;
+		try {// Przesy�ka obiekt�w na porcie 54322
+			//socket = new Socket(host, 54322);
+			out = new ObjectOutputStream(socket.getOutputStream());
+			in = new ObjectInputStream(socket.getInputStream());
+
+			if (ktoryGracz == 1) {
+
+				zwroconyKod = kolizja(1);
+				if (zwroconyKod != 0)
+					d1.koniecGry = true;
+				else
+					d1.koniecGry = false;
+
+				out.writeObject(d1);
+				//out.flush();
+			}
+
+			if (ktoryGracz == 2) {
+
+				zwroconyKod = kolizja(2);
+				if (zwroconyKod != 0)
+					d2.koniecGry = true;
+				else
+					d2.koniecGry = false;
+
+				out.writeObject(d2);
+				//out.flush();
+			}
+
+			d1 = (Dane) in.readObject();
+
+
+			d2 = (Dane) in.readObject();
+
+
+
+			// ========================
+			//socket.close();
+
+			if (d1.koniecGry || d2.koniecGry) { // gdy ktorys z graczy zakonczy
+												// gre
+				JOptionPane.showMessageDialog(this, "Koniec Gry!", "Serwer", 0);
+				socket.close();
+				return 0;
+			}
+			// }
+		} catch (Exception e) {
+//			JOptionPane.showMessageDialog(this,
+//					"Nie udalo sie polaczyc z serwerem", "SERWER", 0);
+//			System.out.println("Nieudane polaczenie z serwerem - gracz " + ktoryGracz);
+//			e.printStackTrace();
+			nieudanePolaczenie+="#";
+		}
+		return 0;
+	}
+
+	/**
+	 * Inicjalizacja i cykliczne wywolywanie innych funkcji
+	 * 
+	 * @see java.applet.Applet#init()
+	 */
+	@Override
+	/*-----------------------------Inicjalizacja------------------------------*/
+	public void init() {
+		JFrame f = new JFrame();
+		f.setTitle("Space Shooter");
+		f.setSize(BOARD_WIDTH, BOARD_HEIGTH);
+		f.add(new MyBoard());
+		f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		f.setResizable(false);
+		f.setVisible(true);
+
+		// ====
+		String host = this.getDocumentBase().getHost();
+		this.host = host;
+		try {// Wyslanie na port 54321 informacji o przy�aczeniu si� do gry
+			socket = new Socket(host, 54321);
+			socket.getOutputStream().write(12345);
+			ktoryGracz = (socket.getInputStream().read());// Pobranie nr gracza
+			// while(oczekiwanie !=1111) {
+			oczekiwanie = socket.getInputStream().read();// Pobranie
+															// potwierdzenia o
+															// przy��czeniu
+															// si� innego
+															// gracza
+			// }
+			socket.close();
+			repaint();
+		} catch (Exception e) {
+			JOptionPane.showMessageDialog(this,
+					"Nie udalo sie polaczyc z serwerem", "SERWER", 0);
+			e.printStackTrace();
+		}
+
+		
+		try {
+			socket = new Socket(host, 54322);
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}///////////////////////////////////
+		
+		class MyTask extends TimerTask {
+			@Override
+			public void run() {
+				//System.err.print("#");
+				petla++;
+				strzal(petla);
+				ruchPociskow();
+				kolizjaPocisku();
+				if (!d1.koniecGry && !d2.koniecGry)
+					przesylka();
+				else {
+					System.exit(1); // gdy gra sie zakonczy,
+									// zamknij aplikacje
+					try {
+						socket.close();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+			}
+		}
+		
+		MyTask task = new MyTask();
+		Timer timer = new Timer();
+		timer.schedule(task, 0, 50);
+
+	}
+
+	
+
+}
+
+/**
+ * W tej klasie rysujemy na ekranie i obslugujemy zdarzenia np. klikniecia mysza
+ */
+
+class MyBoard extends JComponent {
+
+	private static final long serialVersionUID = 1L;
+
+	MyApplet2 aplet = new MyApplet2();
+	// wczytywanie obrazow
+	Image tlo = Toolkit.getDefaultToolkit().createImage("obrazy/space.jpg");
+	Image statek1 = Toolkit.getDefaultToolkit().createImage(
+			"obrazy/statek1.png");
+	Image statek2 = Toolkit.getDefaultToolkit().createImage(
+			"obrazy/statek2.png");
+
+	// String host =aplet.host;
+	/*---------------------------------Obsluga myszy----------------------------------------*/
+	/**
+	 * Pole, po ktorym poruszaja sie gracze
+	 */
+	public MyBoard() {
+		addMouseListener(new MouseAdapter() {
+			/**
+			 * Obsluga zdarzen myszy
+			 * 
+			 * @see java.awt.event.MouseAdapter#mousePressed(java.awt.event.MouseEvent)
+			 */
+			@SuppressWarnings("static-access")
+			public void mousePressed(MouseEvent e) {
+				// repaint();
+				if (aplet.ktoryGracz == 1) {
+					aplet.d1.x = e.getX() - 24;
+					aplet.d1.y = e.getY() - 24;
+					// aplet.przesylka();
+					// repaint();
+				}
+				if (aplet.ktoryGracz == 2) {
+					aplet.d2.x = e.getX() - 24;
+					aplet.d2.y = e.getY() - 24;
+					// aplet.przesylka();
+					// repaint();
+
+				}
+			}
+		});
+
+		/*------------------------Obsluga klawiatury--------------------------------*/
+		JComponent jc = (JComponent) this; // potrzebne do obslugi keyListenera
+		jc.setFocusable(true); // bez tego keyListener nie bedzie chodzic
+		jc.addKeyListener(new KeyAdapter() {
+			/**
+			 * Obsluga klawiatury
+			 * 
+			 * @see java.awt.event.KeyAdapter#keyPressed(java.awt.event.KeyEvent)
+			 */
+			@SuppressWarnings("static-access")
+			@Override
+			public void keyPressed(KeyEvent e) {
+				int klawisz = e.getKeyCode();
+
+				if (klawisz == KeyEvent.VK_LEFT) {
+					if (aplet.ktoryGracz == 1 && aplet.d1.x>0) 
+						aplet.d1.x -= 5;
+					else if (aplet.ktoryGracz == 2 && aplet.d2.x>0)
+						aplet.d2.x -= 5;
+				} else if (klawisz == KeyEvent.VK_RIGHT) {
+					if (aplet.ktoryGracz == 1  && aplet.d1.x<600)
+						aplet.d1.x += 5;
+					else if (aplet.ktoryGracz == 2 && aplet.d2.x<600) 
+						aplet.d2.x += 5;
+				} else if (klawisz == KeyEvent.VK_UP) {
+					if (aplet.ktoryGracz == 1 && aplet.d1.y>0)
+						aplet.d1.y -= 5;
+					else if (aplet.ktoryGracz==2 && aplet.d2.y>0)
+						aplet.d2.y -= 5;
+				} else if (klawisz == KeyEvent.VK_DOWN) {
+					if (aplet.ktoryGracz == 1 && aplet.d1.y<460)
+						aplet.d1.y += 5;
+					else if (aplet.ktoryGracz==2 && aplet.d2.y<460)
+						aplet.d2.y += 5;
+				}
+			}
+			@SuppressWarnings("static-access")
+			@Override
+			public void keyReleased(KeyEvent e) {
+				int klawisz = e.getKeyCode();
+
+				if (klawisz == KeyEvent.VK_LEFT) {
+					if (aplet.ktoryGracz == 1)
+						aplet.d1.x -= 0;
+					else
+						aplet.d2.x -= 0;
+				} else if (klawisz == KeyEvent.VK_RIGHT) {
+					if (aplet.ktoryGracz == 1)
+						aplet.d1.x += 0;
+					else
+						aplet.d2.x += 0;
+				} else if (klawisz == KeyEvent.VK_UP) {
+					if (aplet.ktoryGracz == 1)
+						aplet.d1.y -= 0;
+					else
+						aplet.d2.y -= 0;
+				} else if (klawisz == KeyEvent.VK_DOWN) {
+					if (aplet.ktoryGracz == 1)
+						aplet.d1.y += 0;
+					else
+						aplet.d2.y += 0;
+				}
+			}
+		});
+	}
+
+	/**
+	 * Rysowanie na ekranie
+	 * 
+	 * @see javax.swing.JComponent#paintComponent(java.awt.Graphics)
+	 */
+	@SuppressWarnings("static-access")
+	@Override
+	public void paintComponent(Graphics g) {
+
+		/*----------------------------Rysowanie na ekranie----------------------------*/
+
+		g.setColor(Color.black);
+		g.fillRect(0, 0, 640, 580);
+		g.drawImage(tlo, 0, 0, null);
+
+		// rysowanie asteroid
+		for (int i = 0; i < 10; i++) {
+			if (aplet.d1.asteroidaX[i] >= -50 && aplet.d1.asteroidaHp[i] > 0) {
+				g.setColor(Color.red);
+				g.fillRect(aplet.d1.asteroidaX[i], aplet.d1.asteroidaY[i], 20,
+						20);
+			}
+		}
+
+		// rysowanie statk�w
+		g.drawImage(statek1, aplet.d1.x, aplet.d1.y, 48, 48, null);
+		g.drawImage(statek2, aplet.d2.x, aplet.d2.y, 48, 48, null);
+
+		g.setColor(Color.green);
+		for (int i = 0; i < 5; i++) {
+			if (aplet.d1.pociskStrzelono[i] == true)
+				g.fillRect(aplet.d1.pociskX[i] + 20, aplet.d1.pociskY[i], 4, 4);
+			if (aplet.d2.pociskStrzelono[i] == true)
+				g.fillRect(aplet.d2.pociskX[i] + 20, aplet.d2.pociskY[i], 4, 4);
+		}
+		
+		g.setColor(Color.BLACK);
+		g.fillRect(0, 480, 640, 100);
+
+		g.setColor(Color.white);
+		if (aplet.ktoryGracz == 0)
+			g.drawString("Nieudane polaczenie z serwerem", 1, 20);
+		else {
+			g.drawString("Nr gracza: " , 300, 500);
+			g.drawString("" + aplet.ktoryGracz, 320, 520);
+			g.drawString("" + aplet.d1.punkty, aplet.d1.x + 40, aplet.d1.y);
+			g.drawString("" + aplet.d2.punkty, aplet.d2.x + 40, aplet.d2.y);
+		}
+		
+		g.setColor(Color.RED);
+		if(aplet.nieudanePolaczenie!=null) g.drawString(aplet.nieudanePolaczenie,50,530);
+		
+		super.repaint();
+	}
+}

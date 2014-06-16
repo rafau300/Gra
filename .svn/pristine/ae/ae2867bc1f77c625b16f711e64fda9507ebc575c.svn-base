@@ -1,0 +1,10 @@
+CHANGELOG
+#06.06.2013 ADRIAN
+-DODA�EM TYTU� W OKNIE APLETU
+-POJAWIAJACE SI� OKNO "Nie udalo sie polaczyc z serwerem" ZAKOMENTOWANE
+-DODA�EM INTERFACE 'ZMIENNE'
+#07.06.2013 Rafal
+-Dodalem teleportację asteroid
+-poprawilem nieco kolizje (ale jeszcze trzeba poprawic)
+-zamiast watku jest Timer
+-przerobiona komunikacja - projekt nie powinien sie zawieszac

@@ -1,0 +1,48 @@
+package pl.kielce.tu.projekt;
+
+import java.io.Serializable;
+import java.util.Random;
+
+/**
+ * Ta klase przesylamy przez siec, aplikacje graczy przypisuja tym polom odpowiednie wartosci i nastepnie wysylaja cala klase do serwera.
+ * Nastepnie serwer wysyla do konkretnego gracza dane innego gracza.
+ * @author Rafal Bebenek
+ */
+public class Dane implements Serializable {
+
+	private static final long serialVersionUID = 1L;
+	int x;
+	int y;
+	int ktoryGracz;
+	int punkty;
+	boolean koniecGry=false;
+	int[] asteroidaX = {1,2,3,4,5,6,7,8,9,10};
+	int[] asteroidaY = {1,2,3,4,5,6,7,8,9,10};
+	short[] asteroidaHp = {10,10,10,10,10,10,10,10,10,10,10};
+	int[] asteroidaRX = new int[10];
+	byte[] asteroidaRY = {1,1,1,1,1,1,1,1,1,1};
+	byte[] lvl = {1,1,1,1,1,1,1,1,1,1};
+	boolean[] pociskStrzelono = new boolean[10];
+	int[] pociskX = new int[10];
+	int[] pociskY = new int[10];
+
+	
+	/**
+	 * Konstruktor, ktory pobiera kilka argumentow, oraz inicjalizuje niektore ze zmiennych przesylanych przez siec
+	 * @param args argumenty do konstruktora, ktore sa konieczne do prawidlowej gry
+	 */
+	public Dane (int x,int y,int ktoryGracz,int punkty,boolean koniecGry) {//Na poczatku rozgrywki aplikacje gracza wywoluja konstruktor tej klasy
+		this.x=x;
+		this.y=y;
+		this.ktoryGracz=ktoryGracz;
+		this.punkty=punkty;
+		this.koniecGry=koniecGry;
+		Random r = new Random();
+		for (int i=0;i<10;i++) {
+			asteroidaX[i]=r.nextInt(640);
+			asteroidaY[i]=r.nextInt(200)-200;
+			asteroidaRX[i]=r.nextInt(3)-1;
+			lvl[i]=1;
+		}
+	}
+}
